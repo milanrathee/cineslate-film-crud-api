@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CineSlate — Short Film & Fest Screening Manager</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>">
+</head>
+<body>
+
+  <div class="container">
+
+    <!-- ================================================================== -->
+    <!-- 1. HEADER & FESTIVAL BRANDING                                     -->
+    <!-- ================================================================== -->
+    <header class="festival-header">
+      <div class="festival-badge">
+        <span>🎬</span> Official Fest Selection System
+      </div>
+      <h1 class="festival-title">CINE<span>SLATE</span></h1>
+      <p class="festival-subtitle">
+        Short Film & Festival Screening Manager — Curate submissions, shortlist contenders, and manage premiere screenings.
+      </p>
+
+      <!-- ============================================================== -->
+      <!-- 2. MARQUEE LIVE METRICS BANNER                                 -->
+      <!-- ============================================================== -->
+      <div class="marquee-metrics">
+        <!-- Metric 1: Total Submissions -->
+        <div class="metric-card">
+          <div class="metric-icon">🎞️</div>
+          <div class="metric-details">
+            <span class="metric-value" id="counter-total">0</span>
+            <span class="metric-label">Total Submissions</span>
+          </div>
+        </div>
+
+        <!-- Metric 2: Shortlisted Films -->
+        <div class="metric-card">
+          <div class="metric-icon">⭐</div>
+          <div class="metric-details">
+            <span class="metric-value" id="counter-shortlisted">0</span>
+            <span class="metric-label">Shortlisted Films</span>
+          </div>
+        </div>
+
+        <!-- Metric 3: Screened Films -->
+        <div class="metric-card">
+          <div class="metric-icon">🏆</div>
+          <div class="metric-details">
+            <span class="metric-value" id="counter-screened">0</span>
+            <span class="metric-label">Screened</span>
+          </div>
+        </div>
+
+        <!-- Metric 4: Total Festival Runtime -->
+        <div class="metric-card">
+          <div class="metric-icon">⏱️</div>
+          <div class="metric-details">
+            <span class="metric-value" id="counter-runtime">0 min</span>
+            <span class="metric-label">Festival Runtime</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Global Notification Banner -->
+    <div id="alert-banner" class="alert-banner">
+      <span id="alert-message">Action completed successfully.</span>
+      <button class="alert-close" onclick="dismissAlert()">&times;</button>
+    </div>
+
+    <!-- ================================================================== -->
+    <!-- 3. MAIN FESTIVAL WORKSPACE (FORM + LINEUP)                        -->
+    <!-- ================================================================== -->
+    <main class="festival-layout">
+
+      <!-- ============================================================== -->
+      <!-- 3A. SUBMIT SHORT FILM FORM PANEL (POST /api/films)             -->
+      <!-- ============================================================== -->
+      <section class="form-panel">
+        <div class="panel-header">
+          <span class="clapper-icon">🎬</span>
+          <h2 class="panel-title">Submit Short Film</h2>
+        </div>
+
+        <form id="film-form" class="film-form" onsubmit="handleCreateFilm(event)">
+          <!-- Film Title -->
+          <div class="form-group">
+            <label for="filmTitle">Film Title <span class="required">*</span></label>
+            <input 
+              type="text" 
+              id="filmTitle" 
+              name="filmTitle" 
+              class="form-control" 
+              placeholder="e.g. Midnight Echoes" 
+              required
+            >
+          </div>
+
+          <!-- Director Name -->
+          <div class="form-group">
+            <label for="directorName">Director Name <span class="required">*</span></label>
+            <input 
+              type="text" 
+              id="directorName" 
+              name="directorName" 
+              class="form-control" 
+              placeholder="e.g. Kabir Sharma" 
+              required
+            >
+          </div>
+
+          <!-- Genre & Runtime Row -->
+          <div class="form-row">
+            <div class="form-group">
+              <label for="genre">Genre <span class="required">*</span></label>
+              <select id="genre" name="genre" class="form-control" required>
+                <option value="" disabled selected>Select genre</option>
+                <option value="Drama">Drama</option>
+                <option value="Thriller">Thriller</option>
+                <option value="Sci-Fi">Sci-Fi</option>
+                <option value="Documentary">Documentary</option>
+                <option value="Comedy">Comedy</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="runtimeMins">Runtime (Mins) <span class="required">*</span></label>
+              <input 
+                type="number" 
+                id="runtimeMins" 
+                name="runtimeMins" 
+                class="form-control" 
+                placeholder="e.g. 14" 
+                min="1" 
+                max="300" 
+                required
+              >
+            </div>
+          </div>
+
+          <!-- Initial Screening Status -->
+          <div class="form-group">
+            <label for="screeningStatus">Initial Status</label>
+            <select id="screeningStatus" name="screeningStatus" class="form-control">
+              <option value="Submitted" selected>Submitted</option>
+              <option value="Shortlisted">Shortlisted</option>
+              <option value="Screened">Screened</option>
+            </select>
+          </div>
+
+          <!-- Submit Button -->
+          <button type="submit" class="btn-primary" id="btn-submit">
+            <span>➕</span> Register Film Entry
+          </button>
+        </form>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- 3B. FESTIVAL SCREENING LINEUP (GET, PUT, DELETE)               -->
+      <!-- ============================================================== -->
+      <section class="lineup-section">
+        <!-- Toolbar with Filter Controls -->
+        <div class="lineup-toolbar">
+          <div class="lineup-heading">
+            <span>📽️</span>
+            <span>Screening Lineup</span>
+          </div>
+
+          <div class="lineup-filters">
+            <!-- Filter by Status -->
+            <select id="filter-status" class="filter-select" onchange="renderFilms()">
+              <option value="ALL">All Stages</option>
+              <option value="Submitted">Submitted</option>
+              <option value="Shortlisted">Shortlisted</option>
+              <option value="Screened">Screened</option>
+            </select>
+
+            <!-- Filter by Genre -->
+            <select id="filter-genre" class="filter-select" onchange="renderFilms()">
+              <option value="ALL">All Genres</option>
+              <option value="Drama">Drama</option>
+              <option value="Thriller">Thriller</option>
+              <option value="Sci-Fi">Sci-Fi</option>
+              <option value="Documentary">Documentary</option>
+              <option value="Comedy">Comedy</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Dynamic Film Cards Container -->
+        <div id="films-container" class="film-cards-grid">
+          <!-- Film cards rendered dynamically via vanilla JavaScript -->
+        </div>
+      </section>
+    </main>
+
+    <!-- ================================================================== -->
+    <!-- 4. EDIT FILM MODAL (PUT /api/films/:id)                            -->
+    <!-- ================================================================== -->
+    <div id="edit-modal" class="modal-overlay" onclick="handleModalBackdropClick(event)">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 class="modal-title">✏️ Edit Film Entry</h3>
+          <button class="modal-close" onclick="closeEditModal()">&times;</button>
+        </div>
+        <form id="edit-form" class="film-form" onsubmit="handleUpdateFilm(event)">
+          <input type="hidden" id="edit-film-id">
+
+          <div class="form-group">
+            <label for="edit-filmTitle">Film Title</label>
+            <input type="text" id="edit-filmTitle" class="form-control" required>
+          </div>
+
+          <div class="form-group">
+            <label for="edit-directorName">Director Name</label>
+            <input type="text" id="edit-directorName" class="form-control" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="edit-genre">Genre</label>
+              <select id="edit-genre" class="form-control" required>
+                <option value="Drama">Drama</option>
+                <option value="Thriller">Thriller</option>
+                <option value="Sci-Fi">Sci-Fi</option>
+                <option value="Documentary">Documentary</option>
+                <option value="Comedy">Comedy</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="edit-runtimeMins">Runtime (Mins)</label>
+              <input type="number" id="edit-runtimeMins" class="form-control" min="1" max="300" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="edit-screeningStatus">Screening Status</label>
+            <select id="edit-screeningStatus" class="form-control">
+              <option value="Submitted">Submitted</option>
+              <option value="Shortlisted">Shortlisted</option>
+              <option value="Screened">Screened</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn-primary" style="margin-top: 14px;">
+            Save Changes
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="festival-footer">
+      <p>CineSlate Short Film & Fest Screening Manager &copy; 2026. Built with Node.js, Express &amp; MongoDB Atlas for University Evaluation.</p>
+    </footer>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- 5. VANILLA JAVASCRIPT: REST API FETCH CALLS & UI BINDINGS            -->
+  <!-- ==================================================================== -->
+  <script>
+    /**
+     * VIVA NOTE:
+     * This frontend uses standard browser Fetch API (Promise-based HTTP client).
+     * All calls interact with the Express RESTful routes mounted at /api/films:
+     * - GET    /api/films      -> Read all films
+     * - POST   /api/films      -> Create new film
+     * - PUT    /api/films/:id  -> Update existing film
+     * - DELETE /api/films/:id  -> Delete film
+     */
+
+    const API_BASE = '/api/films';
+    let allFilms = []; // In-memory client cache for filtering and fast metrics update
+
+    // Load films as soon as DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      fetchFilms();
+    });
+
+    /**
+     * Display a temporary status alert banner
+     */
+    function showAlert(message, type = 'success') {
+      const banner = document.getElementById('alert-banner');
+      const msg = document.getElementById('alert-message');
+      banner.className = `alert-banner ${type}`;
+      msg.textContent = message;
+      // Auto-hide alert after 4 seconds
+      clearTimeout(banner._timer);
+      banner._timer = setTimeout(() => {
+        dismissAlert();
+      }, 4000);
+    }
+
+    function dismissAlert() {
+      const banner = document.getElementById('alert-banner');
+      banner.className = 'alert-banner';
+      banner.style.display = 'none';
+    }
+
+    /**
+     * Update the 4 Live Marquee Counters
+     */
+    function updateMetrics(films) {
+      const total = films.length;
+      const shortlisted = films.filter(f => f.screeningStatus === 'Shortlisted').length;
+      const screened = films.filter(f => f.screeningStatus === 'Screened').length;
+      const totalRuntime = films.reduce((acc, f) => acc + (Number(f.runtimeMins) || 0), 0);
+
+      document.getElementById('counter-total').textContent = total;
+      document.getElementById('counter-shortlisted').textContent = shortlisted;
+      document.getElementById('counter-screened').textContent = screened;
+      document.getElementById('counter-runtime').textContent = `${totalRuntime} min`;
+    }
+
+    /**
+     * 1. READ ALL FILMS (GET /api/films)
+     */
+    async function fetchFilms() {
+      const container = document.getElementById('films-container');
+      try {
+        const response = await fetch(API_BASE);
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+          allFilms = result.data || [];
+          updateMetrics(allFilms);
+          renderFilms();
+        } else {
+          showAlert(result.message || 'Failed to load films.', 'error');
+        }
+      } catch (error) {
+        console.error('Error fetching films:', error);
+        showAlert('Network error connecting to CineSlate server.', 'error');
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">⚠️</div>
+            <h3 class="empty-title">Cannot Connect to CineSlate API</h3>
+            <p class="empty-subtitle">Please ensure the server is running on port 3000 and MongoDB Atlas is connected.</p>
+          </div>
+        `;
+      }
+    }
+
+    /**
+     * Filter and render films into HTML cards
+     */
+    function renderFilms() {
+      const container = document.getElementById('films-container');
+      const statusFilter = document.getElementById('filter-status').value;
+      const genreFilter = document.getElementById('filter-genre').value;
+
+      let filtered = allFilms;
+
+      if (statusFilter !== 'ALL') {
+        filtered = filtered.filter(f => f.screeningStatus === statusFilter);
+      }
+      if (genreFilter !== 'ALL') {
+        filtered = filtered.filter(f => f.genre === genreFilter);
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">🎬</div>
+            <h3 class="empty-title">No Short Films Found</h3>
+            <p class="empty-subtitle">Submit your first short film entry using the form on the left!</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(film => {
+        // Status badge CSS helper
+        const statusClass = `status-${(film.screeningStatus || 'submitted').toLowerCase()}`;
+        
+        // Next Stage Logic:
+        // Submitted -> Shortlisted -> Screened
+        let nextStageBtn = '';
+        if (film.screeningStatus === 'Submitted') {
+          nextStageBtn = `
+            <button class="btn-action btn-advance" onclick="advanceStage('${film._id}', 'Shortlisted')" title="Shortlist this film">
+              ⭐ Shortlist
+            </button>
+          `;
+        } else if (film.screeningStatus === 'Shortlisted') {
+          nextStageBtn = `
+            <button class="btn-action btn-advance" onclick="advanceStage('${film._id}', 'Screened')" title="Screen this film">
+              🏆 Screen
+            </button>
+          `;
+        } else {
+          nextStageBtn = `
+            <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399;">
+              ✓ Fest Finalist
+            </span>
+          `;
+        }
+
+        const dateStr = film.createdAt ? new Date(film.createdAt).toLocaleDateString(undefined, {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        }) : '';
+
+        return `
+          <article class="film-card" id="card-${film._id}">
+            <div class="film-card-header">
+              <div class="film-meta-title">
+                <h3 class="film-title-text">${escapeHtml(film.filmTitle)}</h3>
+                <p class="film-director-text">Directed by <strong>${escapeHtml(film.directorName)}</strong></p>
+              </div>
+              <div class="film-badges">
+                <span class="badge genre-badge">🎭 ${escapeHtml(film.genre)}</span>
+                <span class="badge runtime-badge">⏱️ ${film.runtimeMins}m</span>
+                <span class="badge status-badge ${statusClass}">● ${film.screeningStatus}</span>
+              </div>
+            </div>
+
+            <div class="film-card-footer">
+              <span class="film-timestamp">${dateStr ? 'Submitted on ' + dateStr : ''}</span>
+              <div class="film-actions">
+                ${nextStageBtn}
+                <button class="btn-action btn-edit" onclick="openEditModal('${film._id}')">
+                  ✏️ Edit
+                </button>
+                <button class="btn-action btn-delete" onclick="handleDeleteFilm('${film._id}', '${escapeQuotes(film.filmTitle)}')">
+                  🗑️ Remove
+                </button>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    /**
+     * 2. CREATE A SHORT FILM (POST /api/films)
+     */
+    async function handleCreateFilm(event) {
+      event.preventDefault();
+      const form = event.target;
+      const submitBtn = document.getElementById('btn-submit');
+
+      const payload = {
+        filmTitle: form.filmTitle.value.trim(),
+        directorName: form.directorName.value.trim(),
+        genre: form.genre.value,
+        runtimeMins: Number(form.runtimeMins.value),
+        screeningStatus: form.screeningStatus.value
+      };
+
+      try {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = 'Submitting...';
+
+        const response = await fetch(API_BASE, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (response.status === 201 && result.success) {
+          showAlert(`"${payload.filmTitle}" submitted to CineSlate successfully!`, 'success');
+          form.reset();
+          document.getElementById('screeningStatus').value = 'Submitted';
+          // Refresh list from server
+          await fetchFilms();
+        } else {
+          showAlert(result.message || result.error || 'Failed to submit film.', 'error');
+        }
+      } catch (error) {
+        console.error('Error creating film:', error);
+        showAlert('Network error occurred during submission.', 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>➕</span> Register Film Entry';
+      }
+    }
+
+    /**
+     * 3. QUICK ADVANCE SCREENING STAGE (PUT /api/films/:id)
+     */
+    async function advanceStage(id, nextStatus) {
+      try {
+        const response = await fetch(`${API_BASE}/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ screeningStatus: nextStatus })
+        });
+
+        const result = await response.json();
+        if (response.ok && result.success) {
+          showAlert(`Screening status advanced to "${nextStatus}"!`, 'success');
+          await fetchFilms();
+        } else {
+          showAlert(result.message || 'Failed to update screening stage.', 'error');
+        }
+      } catch (error) {
+        console.error('Error advancing stage:', error);
+        showAlert('Failed to contact server.', 'error');
+      }
+    }
+
+    /**
+     * 4. OPEN EDIT MODAL & LOAD FILM DETAILS (GET /api/films/:id)
+     */
+    async function openEditModal(id) {
+      const film = allFilms.find(f => f._id === id);
+      if (!film) return;
+
+      document.getElementById('edit-film-id').value = film._id;
+      document.getElementById('edit-filmTitle').value = film.filmTitle;
+      document.getElementById('edit-directorName').value = film.directorName;
+      document.getElementById('edit-genre').value = film.genre;
+      document.getElementById('edit-runtimeMins').value = film.runtimeMins;
+      document.getElementById('edit-screeningStatus').value = film.screeningStatus;
+
+      document.getElementById('edit-modal').classList.add('active');
+    }
+
+    function closeEditModal() {
+      document.getElementById('edit-modal').classList.remove('active');
+    }
+
+    function handleModalBackdropClick(event) {
+      if (event.target.id === 'edit-modal') {
+        closeEditModal();
+      }
+    }
+
+    /**
+     * 5. SUBMIT EDIT MODAL (PUT /api/films/:id)
+     */
+    async function handleUpdateFilm(event) {
+      event.preventDefault();
+      const id = document.getElementById('edit-film-id').value;
+
+      const payload = {
+        filmTitle: document.getElementById('edit-filmTitle').value.trim(),
+        directorName: document.getElementById('edit-directorName').value.trim(),
+        genre: document.getElementById('edit-genre').value,
+        runtimeMins: Number(document.getElementById('edit-runtimeMins').value),
+        screeningStatus: document.getElementById('edit-screeningStatus').value
+      };
+
+      try {
+        const response = await fetch(`${API_BASE}/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        if (response.ok && result.success) {
+          showAlert(`Film "${payload.filmTitle}" updated successfully!`, 'success');
+          closeEditModal();
+          await fetchFilms();
+        } else {
+          showAlert(result.message || result.error || 'Failed to update film.', 'error');
+        }
+      } catch (error) {
+        console.error('Error updating film:', error);
+        showAlert('Network error while updating film.', 'error');
+      }
+    }
+
+    /**
+     * 6. DELETE FILM SUBMISSION (DELETE /api/films/:id)
+     */
+    async function handleDeleteFilm(id, filmTitle) {
+      const confirmed = window.confirm(`Are you sure you want to remove "${filmTitle}" from the festival screening manager?`);
+      if (!confirmed) return;
+
+      try {
+        const response = await fetch(`${API_BASE}/${id}`, {
+          method: 'DELETE'
+        });
+
+        const result = await response.json();
+        if (response.ok && result.success) {
+          showAlert(`"${filmTitle}" removed from festival submissions.`, 'success');
+          await fetchFilms();
+        } else {
+          showAlert(result.message || 'Failed to delete film entry.', 'error');
+        }
+      } catch (error) {
+        console.error('Error deleting film:', error);
+        showAlert('Network error while deleting film.', 'error');
+      }
+    }
+
+    // Helper sanitizers to avoid XSS in dynamically injected HTML strings
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function escapeQuotes(str) {
+      if (!str) return '';
+      return String(str).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    }
+  </script>
+</body>
+</html>
